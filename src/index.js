@@ -63,21 +63,31 @@ app.post("/auth/register", (req, res) => {
 })
 
 app.get("/login", (req, res) => {
-    res.send('/login');
+    res.render('login');
 })
 
 app.post("/auth/login", (req, res) => {
     var {username, password} = req.body;
     var sql = `SELECT * FROM user WHERE username = ? AND password = ?`;
-    if(username && password) {
+    if(username && password) {        
         connection.query(sql, [username, password], function(err, result, field) {
-            if (results.length > 0) {
-                req.session.loggedin = true;
-                req.session.username = username;
-                res.redirect(`/${username.toLowerCase()}`);
+            if(err) {
+                res.json({
+                    message: err
+                })
             } else {
-                res.send('Incorrect Username and/or Password!');
-            }   
+                if(result.length > 0) {
+                    let encryptedPass = result[0].password;
+                    let verified = bcrypt.compare(password, encryptedPass);
+                    if(verified) {
+                        res.send('yes')
+                    } else {
+                        res.send('Email and password does not match')
+                    }
+                } else {
+                    res.send('Incorrect Username and/or Password!');
+                }
+            }
             res.end();
         })
     } else {
