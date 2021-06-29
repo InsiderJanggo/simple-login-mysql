@@ -11,6 +11,7 @@ let port = process.env.PORT || 5050;
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname + "/views"));
+app.use(express.static(__dirname + "/public"));
 app.use(express.urlencoded({extended: true}));
 app.use(express.json());
 app.use(session({
@@ -46,6 +47,7 @@ app.get("/register", (req, res) => {
 app.post("/auth/register", (req, res) => {
     var {username, email, password, country} = req.body;
     const saltRounds = 10;
+    //encrypted password
     bcrypt.genSalt(saltRounds, function(err, salt) {
         bcrypt.hash(password, salt, function(err, hash) {
             //console.log(hash);
@@ -75,11 +77,13 @@ app.post("/auth/login", (req, res) => {
     var sql = `SELECT * FROM user WHERE username = ?`;
     connection.query(sql, [username], function(err, results) {
         if(results[0].password) {
+            //check if the password is same as the encrypted password
             bcrypt.compare(password, results[0].password, function(err, result) {
                 if(result) {
-                    req.session.username = username
+                    req.session.username = username;
+                    req.session.avatar = results[0].avatar;
                     req.session.loggedin = true;
-                    return res.redirect(`/${req.session.username.toLowerCase()}`)
+                    return res.redirect(`/${req.session.username}`)
                 } else {
                     return res.json({
                         message: err
@@ -95,17 +99,28 @@ app.post("/auth/login", (req, res) => {
 app.get("/:username", async(req, res) => {
     let {username} = req.params;
     req.session.username = username;
+    //check if the user has loggedin
     if(req.session.loggedin) {
-        res.send(`Welcome back ${req.session.username}`)
+        res.render('profile', {
+            lang: global.locales,
+            user: req.session
+        })
     } else {
         res.send('Please login to view this page!');
     }
     res.end();
 })
 
-app.get("/logout", (req, res) => {
-    req.session.destroy();
-    res.redirect("/")
+app.get("/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+        if(err) {
+            res.json({
+                message: err
+            })
+        } else {
+            return res.redirect('/');
+        }
+    });
 })
 
 app.get('/blog', (req, res) => {
@@ -127,3 +142,5 @@ app.listen(port, (err) => {
     if(err) throw err;
     console.log(`Connected to port ${port}`);
 });
+
+module.exports = connection;
