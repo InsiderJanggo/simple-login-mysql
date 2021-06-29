@@ -39,7 +39,9 @@ app.get("/", (req, res) => {
 })
 
 app.get("/register", (req, res) => {
-    res.render('register')
+    res.render('register', {
+        lang: global.locales
+    })
 })
 app.post("/auth/register", (req, res) => {
     var {username, email, password, country} = req.body;
@@ -63,41 +65,36 @@ app.post("/auth/register", (req, res) => {
 })
 
 app.get("/login", (req, res) => {
-    res.render('login');
+    res.render('login', {
+        lang: global.locales
+    });
 })
 
 app.post("/auth/login", (req, res) => {
     var {username, password} = req.body;
-    var sql = `SELECT * FROM user WHERE username = ? AND password = ?`;
-    if(username && password) {        
-        connection.query(sql, [username, password], function(err, result, field) {
-            if(err) {
-                res.json({
-                    message: err
-                })
-            } else {
-                if(result.length > 0) {
-                    let encryptedPass = result[0].password;
-                    let verified = bcrypt.compare(password, encryptedPass);
-                    if(verified) {
-                        res.send('yes')
-                    } else {
-                        res.send('Email and password does not match')
-                    }
+    var sql = `SELECT * FROM user WHERE username = ?`;
+    connection.query(sql, [username], function(err, results) {
+        if(results[0].password) {
+            bcrypt.compare(password, results[0].password, function(err, result) {
+                if(result) {
+                    req.session.username = username
+                    req.session.loggedin = true;
+                    return res.redirect(`/${req.session.username.toLowerCase()}`)
                 } else {
-                    res.send('Incorrect Username and/or Password!');
+                    return res.json({
+                        message: err
+                    })
                 }
-            }
-            res.end();
-        })
-    } else {
-        res.send('Please enter Username and Password!');
-        res.end();
-    }
-})
+            })
+        } else {
+            return res.send(`Wrong Password or username`)
+        }
+    }) 
+}) 
 
 app.get("/:username", async(req, res) => {
     let {username} = req.params;
+    req.session.username = username;
     if(req.session.loggedin) {
         res.send(`Welcome back ${req.session.username}`)
     } else {
@@ -111,6 +108,21 @@ app.get("/logout", (req, res) => {
     res.redirect("/")
 })
 
+app.get('/blog', (req, res) => {
+    var sql = `SELECT * FROM blog_post`;
+    connection.query(sql, function(err, data) {
+        if(err) {
+            res.json({
+                message: err
+            })
+        } else {
+            res.render('blog', {
+                lang: global.locales,
+                blog: data
+            })
+        }
+    })
+})
 app.listen(port, (err) => {
     if(err) throw err;
     console.log(`Connected to port ${port}`);
