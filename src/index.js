@@ -6,6 +6,7 @@ var mysql = require('mysql');
 var app = express();
 const bcrypt = require('bcrypt');
 const { loadLang } = require("./utils/locale");
+var uniqid = require('uniqid');
 
 let port = process.env.PORT || 5050;
 
@@ -22,7 +23,7 @@ app.use(session({
 app.use(loadLang);
 
 
-var connection = mysql.createConnection({
+let connection = mysql.createConnection({
     host     : process.env.DB_HOST,
     user     : process.env.DB_USER,
     password : process.env.DB_PASS,
@@ -83,7 +84,7 @@ app.post("/auth/login", (req, res) => {
                     req.session.username = username;
                     req.session.avatar = results[0].avatar;
                     req.session.loggedin = true;
-                    return res.redirect(`/${req.session.username}`)
+                    return res.redirect(`/user/${req.session.username}`)
                 } else {
                     return res.json({
                         message: err
@@ -96,7 +97,7 @@ app.post("/auth/login", (req, res) => {
     }) 
 }) 
 
-app.get("/:username", async(req, res) => {
+app.get("/user/:username", async(req, res) => {
     let {username} = req.params;
     req.session.username = username;
     //check if the user has loggedin
@@ -138,9 +139,58 @@ app.get('/blog', (req, res) => {
         }
     })
 })
+
+app.get("/blog/create", (req, res) => {
+    if(req.session.loggedin) {
+        res.render('new.ejs')
+    } else {
+        res.send(`Please Login If You Want to create a blog post`)
+    }
+})
+
+app.post('/blog/create', (req, res) => {
+    var {title, body} = req.body;
+    var {username} = req.session;
+    var id = uniqid();
+    if(req.session.loggedin) {
+        var sql = `INSERT INTO blog_post (blog_id, title, body, createdBy)  VALUES (?, ?, ?, ?)`
+        connection.query(sql, [id, title, body, username], function(err, results) {
+            if(err) {
+                return res.json({
+                    message: err
+                })
+            } else {
+                if(!title || !body) {
+                    return res.send('You Cant Send Empty Post')
+                } else {
+                    console.log('1 ROW INSERTED')
+                    return res.redirect('/blog');
+                }
+            }
+        })
+    } else {
+        res.send(`Please Login If You Want to create a blog post`)
+    }
+})
+
+app.get("/blog/:post_id", async(req, res) => {
+    let {post_id} = req.params;
+    var sql = `SELECT * FROM blog_post WHERE blog_id=?`;
+    connection.query(sql, [post_id], function(err, results) {
+        if(err) {
+            res.json({
+                message: err
+            })
+        } else {
+            res.render('views', {
+                lang: global.locales,
+                data: results
+            });
+        }
+    })
+})
+
 app.listen(port, (err) => {
     if(err) throw err;
     console.log(`Connected to port ${port}`);
 });
-
-module.exports = connection;

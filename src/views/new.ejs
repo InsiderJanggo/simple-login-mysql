@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Blog Post 😀</title>
+    <link rel="shortcut icon" href="/img/penguin.png" type="image/x-icon">
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+</head>
+<body style="text-align: center;">
+    <form action="/blog/create" accept-charset="utf-8" method="POST" style="display: inline-block;; width: 450px; text-align: center;">
+        <div class="mb-3">
+          <label for="titleinput" class="form-label">Post Title</label>
+          <input type="text" class="form-control" name="title" autocomplete="off" id="titleinput" required>
+        </div>
+        <div class="mb-3">
+          <label for="bodyinput" class="form-label">Post Description</label>
+          <textarea name="body" class="form-control" id="bodyinput" cols="30" rows="10" style="height: 100px" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Post</button>
+      </form>
+      <script src="/js/bootstrap.min.js"></script>
+</body>
+</html>
